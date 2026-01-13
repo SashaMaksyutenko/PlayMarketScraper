@@ -1,0 +1,107 @@
+﻿Тестовое задание для C# Junior
+
+
+Цель: написать приложение на языке C#, которое будет собирать данные из Google Play Market. На вход приложение будет принимать keyword (ключевое слово) и страна (country), а результатом работы приложения будет массив с приложениями ( именами пакетов) с сохранением порядка (то есть кто был на первом месте должен остаться первым).
+
+
+Теория: Данную задачу можно реализовать выполняя цепочку POST-HTTP запросов к серверам PlayMarket. Одним запросом получить все приложения невозможно, плеймаркет возвращает лишь часть приложений, и требует токен от прошлого запроса чтобы получить следующий. Во время выполнения этого задания вам предстоит выполнять запросы, анализировать ответ от сервера, извлекать полезные данные (имена приложений, токен для следующего запроса), и использовать токен для получения следующего запроса.
+
+
+
+
+Пример: Если перейти по следующему url:
+https://play.google.com/work/search?q=poker перейдя по нему вы получите выдачу по ключевому слову -  poker (см. рис. 1).
+  
+
+Рисунок 1 - Выдача по ключевому слову poker
+
+
+Открыв в браузере “Инструменты веб-разработчика” и перейдете во вкладку “Сеть” вы сможете понять что список приложений получается за счет последововательных вызовов Post запросов https://play.google.com/_/PlayEnterpriseWebStoreUi/data/batchexecute см. рис. 2
+  
+
+Рисунок 2 - Поиск формирования выдачи списка приложений
+
+
+
+
+При анализе страницы вы можете увидеть что за получение списка приложений отвечает следующий POST запрос:
+https://play.google.com/_/PlayEnterpriseWebStoreUi/data/batchexecute?rpcids=qnKhOb&source-path=/work/search&f.sid=7464770855996457685&bl=boq_playenterprisewebuiserver_20251214.04_p0&hl=en-US&gl=US&authuser=1&_reqid=43768&rt=c
+
+
+
+
+Анализ URL-POST запроса
+Как видно из этого запроса можно выделить важные элементы:
+
+
+1. постоянная url https://play.google.com/_/PlayEnterpriseWebStoreUi/data/batchexecute? 
+2. статические параметры: source-path=/work/search&bl=boq_playenterprisewebuiserver_20251214.04_p0&hl=en&gl=US&authuser=0&rt=c 
+
+
+
+
+Анализ тела POST запроса:
+Найдя первый поисковый Post запрос см. рис 3. можно выделить два важных параметра:
+1. lGYRle - название метода когда инициируется поиск (это значение неизменно для всех запросов, и используют только при первом поисковом запросе)
+2. [\"home\"] - ключевое слово
+
+
+  
+
+Рисунок 3 - Анализ параметров тела POST запроса
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Пример Batсh.http:
+POST https://play.google.com/_/PlayEnterpriseWebStoreUi/data/batchexecute?source-path=/work/search&bl=boq_playenterprisewebuiserver_20251214.04_p0&hl=en&gl=US&authuser=0&rt=c
+Content-Type: application/x-www-form-urlencoded
+
+
+f.req=[[["lGYRle","[[[null,null,null,null,[null,1]],[[10,[10,50]],null,null,[96,108,72,100,27,177,183,222,8,57,169,110,11,184,16,1,139,152,194,165,68,163,211,9,71,31,195,12,64,151,150,148,113,104,55,56,145,32,34,10,122]],[\"home\"],4,null,null,null,[null,1]]]",null,"1"]]]
+
+
+Тело первого ответа будет содержать набор данных в которых будет JSON-массив с приложениями, и токен для получения следующего набора приложений для данного ключевого слова.
+Ниже приведен пример тела запроса на ключевое слово home:
+Желтым выделены - имена пакетов 
+Красным выделен - токен для последующего запроса приложений
+
+
+[["wrb.fr","lGYRle","[[null,[[[[[null,[null,[[null,2,[512,512],[null,null,\"https://play-lh.googleusercontent.com/-UJfyCGXOGNlA_7ys13IRTRxnrA5NGick84oQx-dBTr2swpki2xGIlHPcQaF46H21-u4\"],null,[255,255,255,255],null,null,null,2],[null,2,[512,512],[null,null,\"https://play-lh.googleusercontent.com/-UJfyCGXOGNlA_7ys13IRTRxnrA5NGick84oQx-dBTr2swpki2xGIlHPcQaF46H21-u4\"],null,[255,255,255,255],null,null,null,2],[null,2,[512,512],[null,null,\"https://play-lh.googleusercontent.com/-UJfyCGXOGNlA_7ys13IRTRxnrA5NGick84oQx-dBTr2swpki2xGIlHPcQaF46H21-u4\"],null,[255,255,255,255],null,null,null,2]],2,2],\"Google Home\",null,[[[\"Google LLC\",[null,null,null,null,[null,null,\"/work/apps/dev?id\\u003d5700313618786177705\"]],true]],[null,[null,[null,\"Настройка устройств Nest, Chromecast, Google Home и управление ими\"]]]],null,[[null,null,[null,[\"4,3\",4.286061]]]],null,[5,5,5],[null,null,null,null,[null,null,\"/work/apps/details?id\\u003dcom.google.android.apps.chromecast.app\"]],null,[\"qgJcGloIAEoTCLT8qNDiwZEDFbixCgkd3GsCl/oBDwoNCAASCQoFcnUtUlUQALICLgosCiZjb20uZ29vZ2xlLmFuZHJvaWQuYXBwcy5jaHJvbWVjYXN0LmFwcBABGAM\\u003d\"],[\"com.google.android.apps.chromecast.app\",7]],[null,[null,[[null,2,[512,512],[null,null,\"https://play-lh.googleusercontent.com/bGn6qxUHwqZmgtv7RwgxCzl4Uy26SFQrJljVmoOvoIKWa-Xty8s0vOUWcgovUAEAKXnI\"],null,[23,188,242,255],null,null,null,2],[null,2,[512,512],[null,null,\"https://play-lh.googleusercontent.com/bGn6qxUHwqZmgtv7RwgxCzl4Uy26SFQrJljVmoOvoIKWa-Xty8s0vOUWcgovUAEAKXnI\"],null,[23,188,242,255],null,null,null,2],[null,2,[512,512],[null,null,\"https://play-lh.googleusercontent.com/bGn6qxUHwqZmgtv7RwgxCzl4Uy26SFQrJljVmoOvoIKWa-Xty8s0vOUWcgovUAEAKXnI\"],null,[23,188,242,255],null,null,null,2]],2,2],\"Home Assistant\",null,[[[\"Home Assistant\",[null,null,null,null,[null,null,\"/work/apps/developer?id\\u003dHome+Assistant\"]],true]],[null,[null,[null,\"Официальное приложение для Home Assistant. Управляйте своим домом в любой точке мира.\"]]]],null,[[null,null,[null,[\"4,0\",3.99]]]],null,[5,5,5],[null,null,null,null,[null,null,\"/work/apps/details?id\\u003dio.homeassistant.companion.android\"]],null,[\"qgJYGlYIAUoTCLT8qNDiwZEDFbixCgkd3GsCl/oBDwoNCAASCQoFcnUtUlUQAbICKgooCiJpby5ob21lYXNzaXN0YW50LmNvbXBhbmlvbi5hbmRyb2lkEAEYAw\\u003d\\u003d\"],[\"io.homeassistant.companion.android\",7]],[null,[null,[[null,2,[512,512],[null,null,\"https://play-lh.googleusercontent.com/M29pkEabzdIihXxY6d9N1i-hX1ZO8Trt2UTni65CG9NcOZaCTwEusFO3PEBWM4cWdcs\"],null,[30,126,255,255],null,null,null,2],[null,2,[512,512],[null,null,\"https://play-lh.googleusercontent.com/M29pkEabzdIihXxY6d9N1i-hX1ZO8Trt2UTni65CG9NcOZaCTwEusFO3PEBWM4cWdcs\"],null,[30,126,255,255],null,null,null,2],[null,2,[512,512],[null,null,\"https://play-lh.googleusercontent.com/M29pkEabzdIihXxY6d9N1i-hX1ZO8Trt2UTni65CG9NcOZaCTwEusFO3PEBWM4cWdcs\"],null,[30,126,255,255],null,null,null,2]],2,2],\"SmartLife - Smart Living\",null,[[[\"Volcano Technology Limited\",[null,null,null,null,[null,null,\"/work/apps/developer?id\\u003dVolcano+Technology+Limited\"]],true]],[null,[null,[null,\"Умная Жизнь\"]]]],null,[[null,null,[null,[\"4,7\",4.7370777]]]],null,[5,5,5],[null,null,null,null,[null,null,\"/work/apps/details?id\\u003dcom.tuya.smartlife\"]],null,[\"qgJIGkYIMUoTCLT8qNDiwZEDFbixCgkd3GsCl/oBDwoNCAASCQoFcnUtUlUQAbICGgoYChJjb20udHV5YS5zbWFydGxpZmUQARgD\"],[\"com.tuya.smartlife\",7]]],\"\",null,null,true,2,null,[null,\"YskBSj8KPQgyEO_OttwIENayt4YOEOv0sJMNEOzdit0MEJD23Z0LENHEpbEOEPPB3cQNEJHOviwQ1Oig_w4Q-9mmpwNQMvIDggESBQgAEPkBQnlCLAomY29tLmdvb2dsZS5hbmRyb2lkLmFwcHMuY2hyb21lY2FzdC5hcHAQARgDWkkKBGhvbWUYACAAKgIQAUI5YGxIZBuxAbcB3gEIOakBbgu4ARABiwGYAcIBpQFEowHTAQlHH8MBDECXAZYBlAFxaDc4kQEgIgp6agIgAQ\"],true],null,null,[\"qgI2EjQQAJICLwotCidzZWFyY2hfcmVzdWx0c19jbHVzdGVyX2FwcHNfcmFuZ2VfMF8yNDkQLRgD\",[[\"search_results_cluster_apps_range_0_249\",2],null,null,0]]]],null,[],true,[\"qgJ3CnUKBlNUUkVBTRprChUKD3NlYXJjaF9jbHVzdGVycxAuGAMSUggBEgRob21lMABKMggBEAEaLAomY29tLmdvb2dsZS5hbmRyb2lkLmFwcHMuY2hyb21lY2FzdC5hcHAQARgDgAEIiAFumAGppcmgjqHljU+gAQA\\u003d\"]],[\"CAESGQgGEANaEwi0/KjQ4sGRAxW4sQoJHdxrApeqAjUKMwoQQVBQU19TRUFSQ0hfUEFHRTIfCAESEwi0/KjQ4sGRAxW4sQoJHdxrApciBkAAcAF4Aw\\u003d\\u003d\"],[],[]]",null,null,null,"1"]]
+
+
+Для получения следующего списка необходимо послать POST запрос на url используемый в первом запросе но уже с другим телом см. рис. 4
+  
+
+Рисунок 4 - Анализ параметров POST запроса для получения последующих списком приложений
+
+
+Анализ тела POST запроса:
+В поисковых Post запросах см. рис 4. можно выделить два важных параметра:
+3. qnKh0b - название метода когда получаем следующую страницу с приложениями. (Это значение статично, и используют всегда, когда мы продолжаем поиск)
+4. YskBSj8KPQgyEO_OttwIENayt4YOEOv0sJMNEOzdit0MEJD23Z0LENHEpbEOEPPB3cQNEJHOviwQ1Oig_w4Q-9mmpwNQMvIDggESBQgAEPkBQnlCLAomY29tLmdvb2dsZS5hbmRyb2lkLmFwcHMuY2hyb21lY2FzdC5hcHAQARgDWkkKBGhvbWUYACAAKgIQAUI5YGxIZBuxAbcB3gEIOakBbgu4ARABiwGYAcIBpQFEowHTAQlHH8MBDECXAZYBlAFxaDc4kQEgIgp6agIgAQ - Токен следующей страницы получается из предыдущего запроса.
+
+
+Результатом выполнения будет список приложений и токен для получения следующей страницы с приложениями аналогичным как при первом запросе.
+
+
+Запуск и проверка тестового задания:
+Приложение на вход получает следующие параметры: Keyword, Country
+На выходе: получаем список приложений (package name) в правильном порядке (в том каком выдавали сервера Playmarket)
+
+
+Результат работы: Заархивировать исходный код (папку с решением) и выкладываем её на Google Drive, создав публичную ссылку на архив.
