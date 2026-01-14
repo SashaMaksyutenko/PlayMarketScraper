@@ -1,5 +1,4 @@
 using PlayMarketScraper;
-
 namespace PlayMarketScraper;
 
 class Program
@@ -8,73 +7,37 @@ class Program
     {
         if (args.Length < 2)
         {
-            Console.WriteLine("Использование: PlayMarketScraper <keyword> <country>");
-            Console.WriteLine("Пример: PlayMarketScraper poker US");
+            Console.WriteLine("Usage: PlayStoreScraper <keyword> <country>");
+            Console.WriteLine("Example: PlayStoreScraper poker US");
             return;
         }
 
         var keyword = args[0];
         var country = args[1];
 
-        Console.WriteLine($"Поиск приложений для ключевого слова: {keyword}");
-        Console.WriteLine($"Страна: {country}");
+        Console.WriteLine($"Search apps for a keyword: {keyword}");
+        Console.WriteLine($"Country: {country}");
         Console.WriteLine();
 
-        // Получаем cookies из переменной окружения (опционально)
         var cookies = Environment.GetEnvironmentVariable("PLAY_MARKET_COOKIES");
-        var client = new PlayMarketClient(cookies);
-        var parser = new ResponseParser();
-        var allPackageNames = new List<string>();
-        string? continuationToken = null;
-        int pageNumber = 1;
+
+        using var scraper = new PlayStoreScraper(cookies);
 
         try
         {
-            do
-            {
-                Console.WriteLine($"Получение страницы {pageNumber}...");
-                
-                var response = await client.SearchAppsAsync(keyword, country, continuationToken);
-                var (packageNames, nextToken) = parser.ParseResponse(response);
-                
-                Console.WriteLine($"Найдено приложений на странице: {packageNames.Count}");
-                
-                allPackageNames.AddRange(packageNames);
-                continuationToken = nextToken;
-                pageNumber++;
+            var packageNames = await scraper.SearchAppsAsync(keyword, country);
 
-                // Ограничение для предотвращения бесконечного цикла
-                if (pageNumber > 100)
-                {
-                    Console.WriteLine("Достигнут лимит страниц (100)");
-                    break;
-                }
-
-                // Небольшая задержка между запросами
-                await Task.Delay(500);
-                
-            } while (!string.IsNullOrEmpty(continuationToken));
-
-            Console.WriteLine();
-            Console.WriteLine($"Всего найдено приложений: {allPackageNames.Count}");
-            Console.WriteLine();
-            Console.WriteLine("Список package names:");
+            Console.WriteLine($"Total number of apps found: {packageNames.Count}");
             Console.WriteLine("====================");
-            
-            foreach (var packageName in allPackageNames)
+            foreach (var packageName in packageNames)
             {
                 Console.WriteLine(packageName);
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Ошибка: {ex.Message}");
+            Console.WriteLine($"Error: {ex.Message}");
             Console.WriteLine($"StackTrace: {ex.StackTrace}");
-        }
-        finally
-        {
-            client.Dispose();
         }
     }
 }
-
