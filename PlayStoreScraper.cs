@@ -1,3 +1,4 @@
+
 using System.Net;
 using System.Text.RegularExpressions;
 
@@ -7,11 +8,10 @@ public class PlayStoreScraper : IDisposable
 {
     private readonly HttpClient _httpClient;
 
-    public PlayStoreScraper(string? cookies = null)
+    public PlayStoreScraper()
     {
         var handler = new HttpClientHandler
         {
-            UseCookies = false,
             AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
         };
 
@@ -19,9 +19,6 @@ public class PlayStoreScraper : IDisposable
         _httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
         _httpClient.DefaultRequestHeaders.Add("Accept", "text/html");
         _httpClient.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.9");
-
-        if (!string.IsNullOrEmpty(cookies))
-            _httpClient.DefaultRequestHeaders.Add("Cookie", cookies);
     }
 
     public async Task<List<string>> SearchAppsAsync(string keyword, string country)
@@ -33,5 +30,5 @@ public class PlayStoreScraper : IDisposable
         return matches.Select(m => m.Groups[1].Value).Distinct().ToList();
     }
 
-    public void Dispose() => _httpClient?.Dispose();
+    public void Dispose() => _httpClient.Dispose();
 }
